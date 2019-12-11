@@ -21,7 +21,12 @@ In this course, you will learn to:
 
 ## Examples
 
-[Nodejs-Api](./nodejs-api/)
+[Nodejs-Api](./api/)
+
+[React-App](./app/)
+
 [Cloudfomartion](./cloudfomartion/)
+
+[Terraform](./terraform/)
 
 ## Documentation
