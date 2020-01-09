@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Single machine
+Parameters:
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0f616a35e1868cd6e  
+      KeyName:  aws-mc-backend 
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      Tags:
+        -
+          Key: Name
+          Value: aws-mc-backend
+        -
+          Key: Tier
+          Value: Backend
+        -
+          Key: Owner
+          Value: Ramos & Bobr
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #cloud-config
+            repo_update: true
+            repo_upgrade: all
+            packages:
+            - git
+            - nodejs
+            - npm
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: vpc-e6310a81
+      GroupDescription: Security group for EC2 Backend Instances 
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '4004'
+        ToPort: '4004'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+
+Outputs:
+  InstanceSecurityGroup:
+    Description: Security group ec2
+    Value: !Ref InstanceSecurityGroup
