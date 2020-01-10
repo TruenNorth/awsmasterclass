@@ -84,15 +84,31 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
+      BucketName: aws-mc-frontend.com
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
     DeletionPolicy: Retain
+  
+  BucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Principal: '*'
+          Effect: Allow
+          Action: 's3:GetObject'
+          Resource: !Sub '${S3Bucket.Arn}/*'
 
 Outputs:
   InstanceSecurityGroup:
     Description: Security group ec2
     Value: !Ref InstanceSecurityGroup
+  InstancePublicIp:
+    Description: Instance Public Ip
+    Value: !GetAtt EC2Instance.PublicIp
   WebsiteURL:
     Value: !GetAtt [S3Bucket, WebsiteURL]
     Description: URL for website hosted on S3
