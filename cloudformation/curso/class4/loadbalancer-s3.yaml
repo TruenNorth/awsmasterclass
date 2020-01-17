@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Loadbalancer - ScalingGroup - LaunchConfigration - S3WebBucekt 
+Parameters:
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+  VPC:
+    Description: Choose which VPC the Application Load Balancer should be deployed to
+    Type: String
+    Default: vpc-e6310a81
+  Subnets:
+    Description: Choose which subnets the Application Load Balancer should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+    Default: subnet-12cf7b74, subnet-bcea40f5
+
+
+Resources:
+  
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones: !GetAZs ''
+      LaunchConfigurationName: !Ref LaunchConfig
+      TargetGroupARNs: 
+        - !Ref DefaultTargetGroup
+      MinSize: '1'
+      MaxSize: '1'
+  
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0f616a35e1868cd6e  
+      KeyName:  aws-mc-backend 
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      #IamInstanceProfile: !Ref 'WebServerInstanceProfile'
+
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref 'WebServerGroup'
+      Cooldown: '60'
+      ScalingAdjustment: 1
+  
+  WebServerScaleDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref 'WebServerGroup'
+      Cooldown: '60'
+      ScalingAdjustment: -1
+  
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-up if CPU > 90% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      AlarmActions: [!Ref 'WebServerScaleUpPolicy']
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value: !Ref 'WebServerGroup'
+      ComparisonOperator: GreaterThanThreshold
+  
+  CPUAlarmLow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-down if CPU < 70% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      AlarmActions: [!Ref 'WebServerScaleDownPolicy']
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value: !Ref 'WebServerGroup'
+      ComparisonOperator: LessThanThreshold
+  
+  ElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets: [subnet-12cf7b74, subnet-bcea40f5]
+      SecurityGroups:
+        - !Ref LoadBlancerSecurityGroup
+  
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ElasticLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref DefaultTargetGroup
+  
+  DefaultTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VPC
+      Port: 4004
+      Protocol: HTTP
+  
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: vpc-e6310a81
+      GroupDescription: Enable SSH access and HTTP from the load balancer only
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '4004'
+        ToPort: '4004'
+        CidrIp: 0.0.0.0/0
+  
+  LoadBlancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: vpc-e6310a81
+      GroupDescription: Enable SSH access and HTTP from the load balancer only
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+        
+  
+  # S3Bucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     AccessControl: PublicRead
+  #     BucketName: aws-mc-frontend.com
+  #     WebsiteConfiguration:
+  #       IndexDocument: index.html
+  #       ErrorDocument: error.html
+  #   DeletionPolicy: Retain
+  
+  # BucketPolicy: 
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref S3Bucket
+  #     PolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #       - Principal: '*'
+  #         Effect: Allow
+  #         Action: 's3:GetObject'
+  #         Resource: !Sub '${S3Bucket.Arn}/*'
+
+Outputs:
+  InstanceSecurityGroup:
+    Description: Security group ec2
+    Value: !Ref InstanceSecurityGroup
+  # WebsiteURL:
+  #   Value: !GetAtt [S3Bucket, WebsiteURL]
+  #   Description: URL for website hosted on S3
+  # S3BucketSecureURL:
+  #   Value: !Join ['', ['https://', !GetAtt [S3Bucket, DomainName]]]
+  #   Description: Name of S3 bucket to hold website content
+  LoadBalancerURL:
+    Description: The URL of the website
+    Value: !Join ['', ['http://', !GetAtt [ElasticLoadBalancer, DNSName]]]
