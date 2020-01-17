@@ -67,7 +67,7 @@ Resources:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
       AdjustmentType: ChangeInCapacity
-      AutoScalingGroupName: !Ref 'WebServerGroup'
+      AutoScalingGroupName: !Ref WebServerGroup
       Cooldown: '60'
       ScalingAdjustment: 1
   
@@ -75,7 +75,7 @@ Resources:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
       AdjustmentType: ChangeInCapacity
-      AutoScalingGroupName: !Ref 'WebServerGroup'
+      AutoScalingGroupName: !Ref WebServerGroup
       Cooldown: '60'
       ScalingAdjustment: -1
   
@@ -92,7 +92,7 @@ Resources:
       AlarmActions: [!Ref 'WebServerScaleUpPolicy']
       Dimensions:
       - Name: AutoScalingGroupName
-        Value: !Ref 'WebServerGroup'
+        Value: !Ref WebServerGroup
       ComparisonOperator: GreaterThanThreshold
   
   CPUAlarmLow:
@@ -105,10 +105,10 @@ Resources:
       Period: 300
       EvaluationPeriods: 2
       Threshold: 70
-      AlarmActions: [!Ref 'WebServerScaleDownPolicy']
+      AlarmActions: [!Ref WebServerScaleDownPolicy]
       Dimensions:
       - Name: AutoScalingGroupName
-        Value: !Ref 'WebServerGroup'
+        Value: !Ref WebServerGroup
       ComparisonOperator: LessThanThreshold
   
   ElasticLoadBalancer:
@@ -162,38 +162,38 @@ Resources:
         CidrIp: 0.0.0.0/0
         
   
-  # S3Bucket:
-  #   Type: AWS::S3::Bucket
-  #   Properties:
-  #     AccessControl: PublicRead
-  #     BucketName: aws-mc-frontend.com
-  #     WebsiteConfiguration:
-  #       IndexDocument: index.html
-  #       ErrorDocument: error.html
-  #   DeletionPolicy: Retain
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: aws-mc-frontend.com
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+    DeletionPolicy: Retain
   
-  # BucketPolicy: 
-  #   Type: AWS::S3::BucketPolicy
-  #   Properties:
-  #     Bucket: !Ref S3Bucket
-  #     PolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #       - Principal: '*'
-  #         Effect: Allow
-  #         Action: 's3:GetObject'
-  #         Resource: !Sub '${S3Bucket.Arn}/*'
+  BucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Principal: '*'
+          Effect: Allow
+          Action: 's3:GetObject'
+          Resource: !Sub '${S3Bucket.Arn}/*'
 
 Outputs:
   InstanceSecurityGroup:
     Description: Security group ec2
     Value: !Ref InstanceSecurityGroup
-  # WebsiteURL:
-  #   Value: !GetAtt [S3Bucket, WebsiteURL]
-  #   Description: URL for website hosted on S3
-  # S3BucketSecureURL:
-  #   Value: !Join ['', ['https://', !GetAtt [S3Bucket, DomainName]]]
-  #   Description: Name of S3 bucket to hold website content
+  WebsiteURL:
+    Value: !GetAtt [S3Bucket, WebsiteURL]
+    Description: URL for website hosted on S3
+  S3BucketSecureURL:
+    Value: !Join ['', ['https://', !GetAtt [S3Bucket, DomainName]]]
+    Description: Name of S3 bucket to hold website content
   LoadBalancerURL:
     Description: The URL of the website
     Value: !Join ['', ['http://', !GetAtt [ElasticLoadBalancer, DNSName]]]
