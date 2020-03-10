@@ -40,7 +40,6 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
     Default: subnet-12cf7b74, subnet-bcea40f5
 
-
 Resources:
   
   WebServerGroup:
@@ -161,7 +160,6 @@ Resources:
         ToPort: '80'
         CidrIp: 0.0.0.0/0
         
-  
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -195,5 +193,5 @@ Outputs:
     Value: !Join ['', ['https://', !GetAtt [S3Bucket, DomainName]]]
     Description: Name of S3 bucket to hold website content
   LoadBalancerURL:
-    Description: The URL of the website
+    Description: The URL of the backend
     Value: !Join ['', ['http://', !GetAtt [ElasticLoadBalancer, DNSName]]]
